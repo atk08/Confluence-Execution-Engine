@@ -56,3 +56,31 @@ class VolumeProfile:
 
     high_volume_nodes: list[VolumeNode] = field(default_factory=list)
     low_volume_nodes: list[VolumeNode] = field(default_factory=list)
+
+
+@dataclass
+class InstitutionalAnalysis:
+    """
+    Represents the complete institutional analysis of an asset.
+    """
+
+    symbol: str
+    timeframe: str
+
+    volume_profile: VolumeProfile
+
+    poc_quality: float = 0.0
+    poc_integrity: float = 0.0
+
+    hvn_quality: float = 0.0
+    lvn_quality: float = 0.0
+
+    avwap_alignment: float = 0.0
+    fvg_quality: float = 0.0
+
+    trend_score: float = 0.0
+    momentum_score: float = 0.0
+    volatility_score: float = 0.0
+    volume_score: float = 0.0
+
+    institutional_confidence: float = 0.0
