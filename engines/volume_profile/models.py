@@ -38,3 +38,13 @@ class InstitutionalEvidenceObject:
     weight: float = 1.0
 
     metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class HVNQualityInput:
+    volume_concentration: float
+    time_at_price: float
+    historical_reactions: float
+    distance_from_poc: float
+    recency: float
+    session_importance: float
