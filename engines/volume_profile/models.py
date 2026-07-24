@@ -17,13 +17,21 @@ class POCQualityInput:
 
 
 @dataclass
+class POCIntegrityInput:
+    revisits: int
+    penetration_penalty: float
+    acceptance_penalty: float
+    rejection_bonus: float
+    freshness_bonus: float
+
+
+@dataclass
 class InstitutionalEvidenceObject:
     identifier: str
     evidence_type: str
     price: float
 
     quality: float
-
     reliability: float | None = None
     integrity: float | None = None
 
