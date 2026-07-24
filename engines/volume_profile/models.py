@@ -48,3 +48,13 @@ class HVNQualityInput:
     distance_from_poc: float
     recency: float
     session_importance: float
+
+
+@dataclass
+class LVNQualityInput:
+    rejection_strength: float
+    breakout_follow_through: float
+    retest_failure: float
+    volume_deficit: float
+    recency: float
+    session_importance: float
