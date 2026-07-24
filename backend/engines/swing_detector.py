@@ -2,14 +2,8 @@
 Swing detection engine.
 """
 
-from dataclasses import dataclass
 
-
-@dataclass(frozen=True)
-class Candle:
-    high: float
-    low: float
-    close: float
+from backend.models.candles import Candle
 
 
 class SwingDetector:
