@@ -1,5 +1,6 @@
 from backend.engines.trend_score import TrendScore
 from backend.models.candles import Candle
+from backend.models.trend import Trend
 
 
 def test_bullish_trend():
@@ -12,7 +13,7 @@ def test_bullish_trend():
 
     result = TrendScore.calculate(candles)
 
-    assert result.direction == "Bullish"
+    assert result.trend == Trend.BULLISH
     assert result.score == 1.0
 
 
@@ -26,11 +27,11 @@ def test_bearish_trend():
 
     result = TrendScore.calculate(candles)
 
-    assert result.direction == "Bearish"
+    assert result.trend == Trend.BEARISH
     assert result.score == 0.0
 
 
-def test_sideways_trend():
+def test_ranging_trend():
 
     candles = [
         Candle(100, 101, 99, 100, 1000),
@@ -39,5 +40,5 @@ def test_sideways_trend():
 
     result = TrendScore.calculate(candles)
 
-    assert result.direction == "Sideways"
+    assert result.trend == Trend.RANGING
     assert result.score == 0.5

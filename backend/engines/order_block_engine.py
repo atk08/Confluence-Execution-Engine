@@ -2,61 +2,83 @@
 Institutional Order Block Engine.
 """
 
-from backend.engines.break_of_structure_engine import BreakOfStructureEngine
-from backend.engines.change_of_character_engine import ChangeOfCharacterEngine
-from backend.engines.fair_value_gap_engine import FairValueGapEngine
-from backend.models.candles import Candle
+from backend.core.analysis_engine import AnalysisEngine
+from backend.models.analysis_context import AnalysisContext
 from backend.models.order_block_result import OrderBlockResult
 
 
-class OrderBlockEngine:
+class OrderBlockEngine(AnalysisEngine):
+    """
+    Detects the last valid order block following a confirmed
+    institutional move.
+    """
+
+    name = "OrderBlock"
 
     LOOKBACK_CANDLES = 20
 
-    @staticmethod
-    def analyze(candles: list[Candle]) -> OrderBlockResult:
+    @classmethod
+    def analyze(
+        cls,
+        context: AnalysisContext,
+    ) -> OrderBlockResult:
 
-        if len(candles) < 2:
-            return OrderBlockEngine._empty_result()
+        move = context.institutional_move
 
-        bos = BreakOfStructureEngine.analyze(candles)
-        choch = ChangeOfCharacterEngine.analyze(candles)
-        fvg = FairValueGapEngine.analyze(candles)
+        if move is None:
+            return cls._empty_result()
 
-        # For v1 we require:
-        # - Bullish BOS OR Bullish CHoCH
-        # - Bullish FVG
+        if not move.bullish_move and not move.bearish_move:
+            return cls._empty_result()
 
-        if not (
-            (bos.bullish_break or choch.bullish_choch)
-            and fvg.bullish_gap
-        ):
-            return OrderBlockEngine._empty_result()
+        candles = context.candles
 
         start = max(
             0,
-            len(candles) - OrderBlockEngine.LOOKBACK_CANDLES,
+            len(candles) - cls.LOOKBACK_CANDLES,
         )
 
-        for i in range(len(candles) - 2, start - 1, -1):
+        if move.bullish_move:
 
-            candle = candles[i]
+            for i in range(len(candles) - 2, start - 1, -1):
 
-            if candle.close < candle.open:
+                candle = candles[i]
 
-                return OrderBlockResult(
-                    bullish_block=True,
-                    bearish_block=False,
-                    score=1.0,
-                    block_high=candle.high,
-                    block_low=candle.low,
-                    candle_index=i,
-                    mitigated=False,
-                    touched=False,
-                    broken=False,
-                )
+                if candle.close < candle.open:
 
-        return OrderBlockEngine._empty_result()
+                    return OrderBlockResult(
+                        bullish_block=True,
+                        bearish_block=False,
+                        score=1.0,
+                        block_high=candle.high,
+                        block_low=candle.low,
+                        candle_index=i,
+                        mitigated=False,
+                        touched=False,
+                        broken=False,
+                    )
+
+        if move.bearish_move:
+
+            for i in range(len(candles) - 2, start - 1, -1):
+
+                candle = candles[i]
+
+                if candle.close > candle.open:
+
+                    return OrderBlockResult(
+                        bullish_block=False,
+                        bearish_block=True,
+                        score=1.0,
+                        block_high=candle.high,
+                        block_low=candle.low,
+                        candle_index=i,
+                        mitigated=False,
+                        touched=False,
+                        broken=False,
+                    )
+
+        return cls._empty_result()
 
     @staticmethod
     def _empty_result():

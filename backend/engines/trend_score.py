@@ -1,14 +1,15 @@
 """
-Trend Score Engine.
+Trend scoring.
 """
 
 from backend.models.candles import Candle
+from backend.models.trend import Trend
 from backend.models.trend_result import TrendResult
 
 
 class TrendScore:
     """
-    Evaluates trend direction and confidence.
+    Simple trend scoring.
     """
 
     @staticmethod
@@ -16,8 +17,8 @@ class TrendScore:
 
         if len(candles) < 2:
             return TrendResult(
+                trend=Trend.UNKNOWN,
                 score=0.0,
-                direction="Unknown",
                 confidence=0.0,
             )
 
@@ -26,20 +27,20 @@ class TrendScore:
 
         if last_close > first_close:
             return TrendResult(
+                trend=Trend.BULLISH,
                 score=1.0,
-                direction="Bullish",
                 confidence=1.0,
             )
 
         if last_close < first_close:
             return TrendResult(
+                trend=Trend.BEARISH,
                 score=0.0,
-                direction="Bearish",
                 confidence=1.0,
             )
 
         return TrendResult(
+            trend=Trend.RANGING,
             score=0.5,
-            direction="Sideways",
             confidence=0.5,
         )

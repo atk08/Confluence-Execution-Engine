@@ -16,6 +16,9 @@ from backend.engines.liquidity_sweep_engine import (
 from backend.engines.fair_value_gap_engine import (
     FairValueGapEngine,
 )
+from backend.engines.institutional_move_engine import (
+    InstitutionalMoveEngine,
+)
 from backend.models.analysis_context import AnalysisContext
 from backend.models.candles import Candle
 
@@ -40,7 +43,7 @@ class AnalysisContextBuilder:
 
         fvg = FairValueGapEngine.analyze(candles)
 
-        return AnalysisContext(
+        context = AnalysisContext(
             candles=candles,
             structure=structure,
             trend=trend,
@@ -48,4 +51,18 @@ class AnalysisContextBuilder:
             choch=choch,
             liquidity=liquidity,
             fvg=fvg,
+            institutional_move=None,
+        )
+
+        institutional_move = InstitutionalMoveEngine.analyze(context)
+
+        return AnalysisContext(
+            candles=context.candles,
+            structure=context.structure,
+            trend=context.trend,
+            bos=context.bos,
+            choch=context.choch,
+            liquidity=context.liquidity,
+            fvg=context.fvg,
+            institutional_move=institutional_move,
         )

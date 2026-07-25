@@ -1,5 +1,6 @@
 from backend.engines.order_block_engine import OrderBlockEngine
 from backend.models.candles import Candle
+from backend.tests.context_factory import build_context
 
 
 def test_no_order_block():
@@ -10,7 +11,9 @@ def test_no_order_block():
         Candle(100, 101, 99, 100, 1000),
     ]
 
-    result = OrderBlockEngine.analyze(candles)
+    context = build_context(candles)
+
+    result = OrderBlockEngine.analyze(context)
 
     assert result.bullish_block is False
     assert result.bearish_block is False
@@ -21,11 +24,16 @@ def test_find_last_bearish_candle():
 
     candles = [
         Candle(100, 103, 99, 102, 1000),
-        Candle(102, 103, 98, 99, 1000),     # Bearish
-        Candle(99, 110, 99, 109, 3000),     # Large bullish displacement
+        Candle(102, 103, 98, 99, 1000),      # Bearish candle
+        Candle(99, 110, 99, 109, 3000),
     ]
 
-    result = OrderBlockEngine.analyze(candles)
+    context = build_context(
+        candles,
+        bullish_move=True,
+    )
+
+    result = OrderBlockEngine.analyze(context)
 
     assert result.bullish_block is True
     assert result.bearish_block is False
@@ -34,14 +42,17 @@ def test_find_last_bearish_candle():
     assert result.candle_index == 1
 
 
-def test_small_bullish_move_is_not_displacement():
+def test_small_bullish_move_without_institutional_signal():
 
     candles = [
         Candle(100, 103, 99, 102, 1000),
-        Candle(102, 106, 98, 99, 1000),     # Large bearish body
-        Candle(99, 101, 99, 100, 3000),     # Small bullish body
+        Candle(102, 106, 98, 99, 1000),
+        Candle(99, 101, 99, 100, 3000),
     ]
 
-    result = OrderBlockEngine.analyze(candles)
+    context = build_context(candles)
+
+    result = OrderBlockEngine.analyze(context)
 
     assert result.bullish_block is False
+    assert result.bearish_block is False
