@@ -1,5 +1,6 @@
 from backend.engines.structure_engine import StructureEngine
 from backend.models.candles import Candle
+from backend.models.trend import Trend
 
 
 def test_bullish_structure():
@@ -16,8 +17,14 @@ def test_bullish_structure():
 
     result = StructureEngine.analyze(candles)
 
-    assert result["bullish"] is True
-    assert result["score"] == 1.0
+    assert result.trend == Trend.BULLISH
+    assert result.score > 0.60
+
+    assert result.higher_highs is not None
+    assert result.higher_lows is not None
+
+    assert result.latest_swing_high is not None
+    assert result.latest_swing_low is not None
 
 
 def test_non_bullish_structure():
@@ -34,5 +41,8 @@ def test_non_bullish_structure():
 
     result = StructureEngine.analyze(candles)
 
-    assert result["bullish"] is False
-    assert result["score"] < 0.60
+    assert result.trend != Trend.BULLISH
+    assert result.score < 0.60
+
+    assert result.higher_highs is not None
+    assert result.higher_lows is not None
