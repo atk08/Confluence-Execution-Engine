@@ -1,16 +1,20 @@
 """
-Trend result model.
+Trend analysis result.
 """
 
 from dataclasses import dataclass
 
+from backend.models.trend import Trend
 
-@dataclass
+
+@dataclass(frozen=True)
 class TrendResult:
     """
-    Result returned by the TrendScore engine.
+    Represents the current market trend.
     """
 
+    trend: Trend
+
     score: float
-    direction: str
+
     confidence: float
