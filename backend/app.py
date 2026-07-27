@@ -4,7 +4,14 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from backend.models.candles import Candle
-from backend.pipelines.analysis_pipeline import AnalysisPipeline
+
+from backend.pipelines.analysis_pipeline import (
+    AnalysisPipeline,
+)
+
+from backend.engines.final_analysis_engine import (
+    FinalAnalysisEngine,
+)
 
 
 app = FastAPI(
@@ -40,6 +47,7 @@ def health():
 
 @app.post("/analyze")
 def analyze(candles: list[CandleRequest]):
+
     candle_objects = [
         Candle(
             open=c.open,
@@ -51,6 +59,12 @@ def analyze(candles: list[CandleRequest]):
         for c in candles
     ]
 
-    context = AnalysisPipeline.run(candle_objects)
+    context = AnalysisPipeline.run(
+        candle_objects
+    )
 
-    return asdict(context)
+    result = FinalAnalysisEngine.analyze(
+        context
+    )
+
+    return asdict(result)
