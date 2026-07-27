@@ -1,5 +1,7 @@
 from backend.engines.execution_engine import ExecutionEngine
 from backend.models.candles import Candle
+from backend.models.execution_confidence import ExecutionConfidence
+from backend.models.trade_direction import TradeDirection
 from backend.tests.context_factory import build_context
 
 
@@ -16,7 +18,7 @@ def test_no_trade_signal():
     result = ExecutionEngine.analyze(context)
 
     assert result.should_trade is False
-    assert result.direction == "SELL"
+    assert result.direction == TradeDirection.SELL
     assert result.trade_score == 0.0
 
 
@@ -35,5 +37,6 @@ def test_trade_confidence():
 
     result = ExecutionEngine.analyze(context)
 
+    assert result.direction == TradeDirection.SELL
     assert result.trade_score == 30.0
-    assert result.confidence == "Low"
+    assert result.confidence == ExecutionConfidence.LOW
