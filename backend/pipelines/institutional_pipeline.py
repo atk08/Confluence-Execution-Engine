@@ -16,6 +16,10 @@ from backend.engines.liquidity_sweep_engine import (
 from backend.engines.fair_value_gap_engine import (
     FairValueGapEngine,
 )
+from backend.engines.avwap_result_engine import (
+    AVWAPResultEngine,
+)
+
 from backend.models.analysis_context import AnalysisContext
 
 
@@ -35,6 +39,8 @@ class InstitutionalPipeline:
 
         fvg = FairValueGapEngine.analyze(context.candles)
 
+        avwap = AVWAPResultEngine.analyze(context.candles)
+
         return AnalysisContext(
             candles=context.candles,
             structure=context.structure,
@@ -43,4 +49,5 @@ class InstitutionalPipeline:
             choch=choch,
             liquidity=liquidity,
             fvg=fvg,
+            avwap=avwap,
         )
