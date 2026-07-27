@@ -19,6 +19,9 @@ from backend.engines.fair_value_gap_engine import (
 from backend.engines.avwap_result_engine import (
     AVWAPResultEngine,
 )
+from backend.engines.volume_profile_engine import (
+    VolumeProfileEngine,
+)
 
 from backend.models.analysis_context import AnalysisContext
 
@@ -41,6 +44,10 @@ class InstitutionalPipeline:
 
         avwap = AVWAPResultEngine.analyze(context.candles)
 
+        volume_profile = VolumeProfileEngine.analyze(
+            context.candles
+        )
+
         return AnalysisContext(
             candles=context.candles,
             structure=context.structure,
@@ -50,4 +57,5 @@ class InstitutionalPipeline:
             liquidity=liquidity,
             fvg=fvg,
             avwap=avwap,
+            volume_profile=volume_profile,
         )
