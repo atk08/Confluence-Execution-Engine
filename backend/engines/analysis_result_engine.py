@@ -5,43 +5,49 @@ Analysis Result Engine.
 from backend.core.analysis_engine import AnalysisEngine
 
 from backend.models.analysis_result import AnalysisResult
-from backend.models.confluence_score_v2 import ConfluenceScoreV2
-from backend.models.trade_signal import TradeSignal
 
 
 class AnalysisResultEngine(AnalysisEngine):
     """
-    Combines final outputs into a single application response.
+    Combines final outputs into a single result.
     """
 
     name = "Analysis Result Engine"
+
 
     @classmethod
     def analyze(
         cls,
         symbol: str,
         timeframe: str,
-        confluence: ConfluenceScoreV2,
-        signal: TradeSignal,
+        confluence,
+        signal,
         current_price: float = 0.0,
-        market_bias: str = "UNKNOWN",
-        reasons: list[str] | None = None,
+        market_bias: str = "NEUTRAL",
+        institutional_move=None,
+        reasons=None,
     ) -> AnalysisResult:
 
-        if signal.signal.value == "BUY":
+
+        if reasons is None:
+            reasons = []
+
+
+        if confluence.score >= 70:
             summary = (
-                "Bullish setup detected with strong confluence."
+                "Strong confluence setup detected."
             )
 
-        elif signal.signal.value == "SELL":
+        elif confluence.score >= 50:
             summary = (
-                "Bearish setup detected with strong confluence."
+                "Setup has partial confluence."
             )
 
         else:
             summary = (
                 "Setup does not have enough confluence yet."
             )
+
 
         return AnalysisResult(
             symbol=symbol,
@@ -50,6 +56,7 @@ class AnalysisResultEngine(AnalysisEngine):
             market_bias=market_bias,
             confluence=confluence,
             signal=signal,
+            institutional_move=institutional_move,
             summary=summary,
-            reasons=reasons or [],
+            reasons=reasons,
         )

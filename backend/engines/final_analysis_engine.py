@@ -1,13 +1,14 @@
 """
 Final Analysis Engine.
 
-Combines analysis context into final trading output.
+Combines all analysis engines into final trading output.
 """
 
 from backend.core.analysis_engine import AnalysisEngine
 
 from backend.models.analysis_context import AnalysisContext
 from backend.models.analysis_result import AnalysisResult
+
 
 from backend.engines.market_structure_score_engine import (
     MarketStructureScoreEngine,
@@ -57,6 +58,7 @@ class FinalAnalysisEngine(AnalysisEngine):
 
     name = "Final Analysis Engine"
 
+
     @classmethod
     def analyze(
         cls,
@@ -64,6 +66,7 @@ class FinalAnalysisEngine(AnalysisEngine):
         symbol: str = "UNKNOWN",
         timeframe: str = "UNKNOWN",
     ) -> AnalysisResult:
+
 
         #
         # Market Structure
@@ -84,7 +87,7 @@ class FinalAnalysisEngine(AnalysisEngine):
 
 
         #
-        # Anchored VWAP
+        # AVWAP
         #
 
         avwap = AVWAPScoreEngine.analyze(
@@ -104,9 +107,17 @@ class FinalAnalysisEngine(AnalysisEngine):
         #
         # Liquidity
         #
+        # IMPORTANT:
+        # Now uses full AnalysisContext
+        # so it can see:
+        # - trend
+        # - institutional move
+        # - BOS
+        # - CHoCH
+        #
 
         liquidity = LiquidityScoreEngine.analyze(
-            context.liquidity
+            context
         )
 
 
@@ -118,13 +129,14 @@ class FinalAnalysisEngine(AnalysisEngine):
             context
         )
 
+
         order_block = OrderBlockScoreEngine.analyze(
             order_block_result
         )
 
 
         #
-        # Final Confluence Score
+        # Confluence Calculation
         #
 
         confluence = ConfluenceScoreV2Engine.analyze(
@@ -162,12 +174,15 @@ class FinalAnalysisEngine(AnalysisEngine):
         #
 
         if confluence.score >= 60:
+
             market_bias = "BULLISH"
 
         elif confluence.score <= 40:
+
             market_bias = "BEARISH"
 
         else:
+
             market_bias = "NEUTRAL"
 
 
@@ -179,11 +194,12 @@ class FinalAnalysisEngine(AnalysisEngine):
             *confluence.reasons,
             *signal.reasons,
             *order_block.reasons,
+            *liquidity.reasons,
         ]
 
 
         #
-        # Final Response
+        # Final Result
         #
 
         return AnalysisResultEngine.analyze(
@@ -193,5 +209,6 @@ class FinalAnalysisEngine(AnalysisEngine):
             market_bias=market_bias,
             confluence=confluence,
             signal=signal,
+            institutional_move=context.institutional_move,
             reasons=reasons,
         )

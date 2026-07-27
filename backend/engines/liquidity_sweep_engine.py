@@ -1,51 +1,124 @@
 """
-Liquidity Sweep Engine.
+Institutional Liquidity Sweep Engine.
+
+Detects recent liquidity grabs from swing highs/lows.
 """
 
 from backend.engines.structure_engine import StructureEngine
+
 from backend.models.candles import Candle
+
 from backend.models.liquidity_sweep_result import (
     LiquiditySweepResult,
 )
 
 
 class LiquiditySweepEngine:
+
     """
-    Detects liquidity sweeps of confirmed swing highs and lows.
+    Detects institutional liquidity sweeps.
     """
+
+    LOOKBACK = 20
+
 
     @staticmethod
-    def analyze(candles: list[Candle]) -> LiquiditySweepResult:
+    def analyze(
+        candles: list[Candle],
+    ) -> LiquiditySweepResult:
 
-        structure = StructureEngine.analyze(candles)
 
-        last_candle = candles[-1]
+        if len(candles) < 5:
 
-        bullish_sweep = (
-            structure.latest_swing_high is not None
-            and last_candle.high > structure.latest_swing_high.price
-            and last_candle.close < structure.latest_swing_high.price
+            return LiquiditySweepResult(
+                bullish_sweep=False,
+                bearish_sweep=False,
+                score=0.0,
+                swept_level=None,
+            )
+
+
+        start = max(
+            0,
+            len(candles) - LiquiditySweepEngine.LOOKBACK
         )
 
-        bearish_sweep = (
-            structure.latest_swing_low is not None
-            and last_candle.low < structure.latest_swing_low.price
-            and last_candle.close > structure.latest_swing_low.price
-        )
 
-        swept_level = None
+        recent = candles[start:]
 
-        if bullish_sweep:
-            swept_level = structure.latest_swing_high.price
 
-        elif bearish_sweep:
-            swept_level = structure.latest_swing_low.price
+        for i in range(
+            len(recent) - 1,
+            0,
+            -1
+        ):
 
-        score = 1.0 if bullish_sweep or bearish_sweep else 0.0
+            previous_candles = candles[:start+i]
+
+
+            structure = StructureEngine.analyze(
+                previous_candles
+            )
+
+
+            candle = recent[i]
+
+
+            #
+            # Sweep swing high
+            # Project convention:
+            # bullish sweep
+            #
+
+            if structure.latest_swing_high:
+
+                level = (
+                    structure.latest_swing_high.price
+                )
+
+
+                if (
+                    candle.high > level
+                    and candle.close < level
+                ):
+
+                    return LiquiditySweepResult(
+                        bullish_sweep=True,
+                        bearish_sweep=False,
+                        score=1.0,
+                        swept_level=level,
+                    )
+
+
+            #
+            # Sweep swing low
+            # Project convention:
+            # bearish sweep
+            #
+
+            if structure.latest_swing_low:
+
+                level = (
+                    structure.latest_swing_low.price
+                )
+
+
+                if (
+                    candle.low < level
+                    and candle.close > level
+                ):
+
+                    return LiquiditySweepResult(
+                        bullish_sweep=False,
+                        bearish_sweep=True,
+                        score=1.0,
+                        swept_level=level,
+                    )
+
 
         return LiquiditySweepResult(
-            bullish_sweep=bullish_sweep,
-            bearish_sweep=bearish_sweep,
-            score=score,
-            swept_level=swept_level,
+            bullish_sweep=False,
+            bearish_sweep=False,
+            score=0.0,
+            swept_level=None,
         )
