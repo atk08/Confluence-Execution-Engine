@@ -1,6 +1,6 @@
 from dataclasses import asdict
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel
 
 from backend.models.candles import Candle
@@ -81,13 +81,38 @@ def scan(
     outputsize: int = Query(100),
 ):
 
+    # Normalize symbol
+    symbol = symbol.upper()
+
+    # Force crypto format
+    if symbol in [
+        "BTC",
+        "ETH",
+        "SOL",
+        "XRP",
+    ]:
+        symbol = f"{symbol}/USD"
+
     provider = TwelveDataProvider()
 
-    candles = provider.get_candles(
-        symbol=symbol,
-        interval=interval,
-        outputsize=outputsize,
-    )
+    try:
+        candles = provider.get_candles(
+            symbol=symbol,
+            interval=interval,
+            outputsize=outputsize,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Market data error: {str(e)}",
+        )
+
+    if not candles:
+        raise HTTPException(
+            status_code=404,
+            detail="No candles returned for symbol.",
+        )
 
     context = AnalysisPipeline.run(
         candles
