@@ -12,15 +12,19 @@ from backend.models.analysis_result import AnalysisResult
 from backend.engines.market_structure_score_engine import (
     MarketStructureScoreEngine,
 )
+
 from backend.engines.volume_profile_score_engine import (
     VolumeProfileScoreEngine,
 )
+
 from backend.engines.avwap_score_engine import (
     AVWAPScoreEngine,
 )
+
 from backend.engines.fair_value_gap_score_engine import (
     FairValueGapScoreEngine,
 )
+
 from backend.engines.liquidity_score_engine import (
     LiquidityScoreEngine,
 )
@@ -29,9 +33,13 @@ from backend.engines.confluence_score_v2_engine import (
     ConfluenceScoreV2Engine,
 )
 
-from backend.engines.signal_engine import SignalEngine
+from backend.engines.signal_engine import (
+    SignalEngine,
+)
 
-from backend.models.order_block_score import OrderBlockScore
+from backend.models.order_block_score import (
+    OrderBlockScore,
+)
 
 from backend.engines.analysis_result_engine import (
     AnalysisResultEngine,
@@ -98,9 +106,34 @@ class FinalAnalysisEngine(AnalysisEngine):
             confluence
         )
 
+        # Current price
+        current_price = (
+            context.candles[-1].close
+            if context.candles
+            else 0.0
+        )
+
+        # Market bias
+        if confluence.score >= 60:
+            market_bias = "BULLISH"
+
+        elif confluence.score <= 40:
+            market_bias = "BEARISH"
+
+        else:
+            market_bias = "NEUTRAL"
+
+        reasons = [
+            *confluence.reasons,
+            *signal.reasons,
+        ]
+
         return AnalysisResultEngine.analyze(
             symbol=symbol,
             timeframe=timeframe,
+            current_price=current_price,
+            market_bias=market_bias,
             confluence=confluence,
             signal=signal,
+            reasons=reasons,
         )

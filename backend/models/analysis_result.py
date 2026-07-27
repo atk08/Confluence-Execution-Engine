@@ -18,8 +18,14 @@ class AnalysisResult:
 
     timeframe: str
 
+    current_price: float
+
+    market_bias: str
+
     confluence: ConfluenceScoreV2
 
     signal: TradeSignal
+
+    summary: str
 
     reasons: list[str]
