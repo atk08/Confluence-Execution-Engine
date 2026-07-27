@@ -7,7 +7,6 @@ Combines analysis context into final trading output.
 from backend.core.analysis_engine import AnalysisEngine
 
 from backend.models.analysis_context import AnalysisContext
-
 from backend.models.analysis_result import AnalysisResult
 
 from backend.engines.market_structure_score_engine import (
@@ -33,6 +32,7 @@ from backend.engines.confluence_score_v2_engine import (
 from backend.engines.signal_engine import SignalEngine
 
 from backend.models.order_block_score import OrderBlockScore
+
 from backend.engines.analysis_result_engine import (
     AnalysisResultEngine,
 )
@@ -49,9 +49,13 @@ class FinalAnalysisEngine(AnalysisEngine):
     def analyze(
         cls,
         context: AnalysisContext,
+        symbol: str = "UNKNOWN",
+        timeframe: str = "UNKNOWN",
     ) -> AnalysisResult:
 
-        market = MarketStructureScoreEngine.analyze(context)
+        market = MarketStructureScoreEngine.analyze(
+            context
+        )
 
         volume = VolumeProfileScoreEngine.analyze(
             context.volume_profile
@@ -95,8 +99,8 @@ class FinalAnalysisEngine(AnalysisEngine):
         )
 
         return AnalysisResultEngine.analyze(
-            symbol="UNKNOWN",
-            timeframe="UNKNOWN",
+            symbol=symbol,
+            timeframe=timeframe,
             confluence=confluence,
             signal=signal,
         )

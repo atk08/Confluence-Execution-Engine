@@ -1,6 +1,6 @@
 from dataclasses import asdict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 
 from backend.models.candles import Candle
@@ -11,6 +11,10 @@ from backend.pipelines.analysis_pipeline import (
 
 from backend.engines.final_analysis_engine import (
     FinalAnalysisEngine,
+)
+
+from backend.providers.twelve_data import (
+    TwelveDataProvider,
 )
 
 
@@ -65,6 +69,34 @@ def analyze(candles: list[CandleRequest]):
 
     result = FinalAnalysisEngine.analyze(
         context
+    )
+
+    return asdict(result)
+
+
+@app.get("/scan/{symbol:path}")
+def scan(
+    symbol: str,
+    interval: str = Query("5min"),
+    outputsize: int = Query(100),
+):
+
+    provider = TwelveDataProvider()
+
+    candles = provider.get_candles(
+        symbol=symbol,
+        interval=interval,
+        outputsize=outputsize,
+    )
+
+    context = AnalysisPipeline.run(
+        candles
+    )
+
+    result = FinalAnalysisEngine.analyze(
+        context,
+        symbol=symbol,
+        timeframe=interval,
     )
 
     return asdict(result)
