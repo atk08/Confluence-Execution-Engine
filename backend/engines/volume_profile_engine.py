@@ -1,7 +1,7 @@
 """
 Institutional Volume Profile Engine.
 
-Builds a basic institutional Volume Profile from candle data.
+Handles both real volume feeds and zero-volume crypto feeds.
 """
 
 from backend.core.analysis_engine import AnalysisEngine
@@ -28,67 +28,110 @@ class VolumeProfileEngine(AnalysisEngine):
                 value_area_low=None,
             )
 
-        total_volume = sum(c.volume for c in candles)
+        closes = [
+            candle.close
+            for candle in candles
+        ]
 
-        if total_volume == 0:
-            return VolumeProfileResult(
-                score=0.0,
-                bullish=False,
-                bearish=False,
-                poc=None,
-                value_area_high=None,
-                value_area_low=None,
-            )
+        highs = [
+            candle.high
+            for candle in candles
+        ]
 
-        # --------------------------------------------------
-        # Find Point Of Control (highest volume candle)
-        # --------------------------------------------------
+        lows = [
+            candle.low
+            for candle in candles
+        ]
 
-        poc_candle = max(
-            candles,
-            key=lambda candle: candle.volume,
+        total_volume = sum(
+            candle.volume
+            for candle in candles
         )
 
-        poc = poc_candle.close
+        # -----------------------------------
+        # Real Volume Mode
+        # -----------------------------------
 
-        # --------------------------------------------------
-        # Approximate Value Area
-        # --------------------------------------------------
+        if total_volume > 0:
 
-        highs = [c.high for c in candles]
-        lows = [c.low for c in candles]
+            poc_candle = max(
+                candles,
+                key=lambda candle: candle.volume,
+            )
+
+            poc = poc_candle.close
+
+        # -----------------------------------
+        # Crypto Fallback Mode
+        # -----------------------------------
+
+        else:
+
+            price_frequency = {}
+
+            for price in closes:
+
+                rounded = round(price, 2)
+
+                price_frequency[rounded] = (
+                    price_frequency.get(
+                        rounded,
+                        0
+                    )
+                    + 1
+                )
+
+            poc = max(
+                price_frequency,
+                key=price_frequency.get,
+            )
 
         session_high = max(highs)
+
         session_low = min(lows)
 
-        session_range = session_high - session_low
+        session_range = (
+            session_high - session_low
+        )
 
-        value_area_high = session_low + session_range * 0.85
-        value_area_low = session_low + session_range * 0.15
+        value_area_high = (
+            session_low
+            + session_range * 0.85
+        )
 
-        # --------------------------------------------------
-        # Market Bias
-        # --------------------------------------------------
+        value_area_low = (
+            session_low
+            + session_range * 0.15
+        )
 
         last_close = candles[-1].close
 
         bullish = last_close > poc
         bearish = last_close < poc
 
-        # --------------------------------------------------
-        # Institutional Score
-        # --------------------------------------------------
-
         score = 0.0
 
+        # Price acceptance
         if bullish or bearish:
             score += 40
 
-        if value_area_low <= last_close <= value_area_high:
+        # Inside value area
+        if (
+            value_area_low
+            <= last_close
+            <= value_area_high
+        ):
             score += 30
 
-        if abs(last_close - poc) / poc < 0.01:
-            score += 30
+        # Near POC
+        if poc != 0:
+
+            distance = abs(
+                last_close - poc
+            ) / poc
+
+            if distance < 0.01:
+                score += 30
 
         return VolumeProfileResult(
             score=min(score, 100.0),

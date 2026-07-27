@@ -7,23 +7,34 @@ Responsible for institutional concepts.
 from backend.engines.break_of_structure_engine import (
     BreakOfStructureEngine,
 )
+
 from backend.engines.change_of_character_engine import (
     ChangeOfCharacterEngine,
 )
+
 from backend.engines.liquidity_sweep_engine import (
     LiquiditySweepEngine,
 )
+
 from backend.engines.fair_value_gap_engine import (
     FairValueGapEngine,
 )
+
+from backend.engines.institutional_move_engine import (
+    InstitutionalMoveEngine,
+)
+
 from backend.engines.avwap_result_engine import (
     AVWAPResultEngine,
 )
+
 from backend.engines.volume_profile_engine import (
     VolumeProfileEngine,
 )
 
-from backend.models.analysis_context import AnalysisContext
+from backend.models.analysis_context import (
+    AnalysisContext,
+)
 
 
 class InstitutionalPipeline:
@@ -32,23 +43,42 @@ class InstitutionalPipeline:
     """
 
     @staticmethod
-    def run(context: AnalysisContext) -> AnalysisContext:
+    def run(
+        context: AnalysisContext,
+    ) -> AnalysisContext:
 
-        bos = BreakOfStructureEngine.analyze(context.candles)
+        bos = BreakOfStructureEngine.analyze(
+            context.candles
+        )
 
-        choch = ChangeOfCharacterEngine.analyze(context.candles)
+        choch = ChangeOfCharacterEngine.analyze(
+            context.candles
+        )
 
-        liquidity = LiquiditySweepEngine.analyze(context.candles)
+        liquidity = LiquiditySweepEngine.analyze(
+            context.candles
+        )
 
-        fvg = FairValueGapEngine.analyze(context.candles)
+        fvg = FairValueGapEngine.analyze(
+            context.candles
+        )
 
-        avwap = AVWAPResultEngine.analyze(context.candles)
+
+        avwap = AVWAPResultEngine.analyze(
+            context.candles
+        )
+
 
         volume_profile = VolumeProfileEngine.analyze(
             context.candles
         )
 
-        return AnalysisContext(
+
+        # Create temporary context
+        # so InstitutionalMoveEngine
+        # can access BOS, CHoCH and FVG
+
+        temp_context = AnalysisContext(
             candles=context.candles,
             structure=context.structure,
             trend=context.trend,
@@ -57,5 +87,35 @@ class InstitutionalPipeline:
             liquidity=liquidity,
             fvg=fvg,
             avwap=avwap,
+            volume_profile=volume_profile,
+        )
+
+
+        institutional_move = (
+            InstitutionalMoveEngine.analyze(
+                temp_context
+            )
+        )
+
+
+        return AnalysisContext(
+            candles=context.candles,
+
+            structure=context.structure,
+
+            trend=context.trend,
+
+            bos=bos,
+
+            choch=choch,
+
+            liquidity=liquidity,
+
+            fvg=fvg,
+
+            institutional_move=institutional_move,
+
+            avwap=avwap,
+
             volume_profile=volume_profile,
         )
