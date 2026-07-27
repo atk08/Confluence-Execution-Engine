@@ -34,10 +34,26 @@ class VolumeProfileScoreEngine(AnalysisEngine):
                 ],
             )
 
-        poc_quality = 20.0
-        value_area = 20.0
-        hvn_lvn = 20.0
-        reaction_strength = 20.0
+        # POC quality
+        poc_quality = 20.0 if profile.poc is not None else 0.0
+
+        # Value Area quality
+        value_area = (
+            20.0
+            if (
+                profile.value_area_high is not None
+                and profile.value_area_low is not None
+            )
+            else 0.0
+        )
+
+        # Trend alignment
+        hvn_lvn = 20.0 if (profile.bullish or profile.bearish) else 0.0
+
+        # Existing engine confidence
+        reaction_strength = min(profile.score, 20.0)
+
+        # Placeholder until integrated with AVWAP/FVG
         confluence = 20.0
 
         total = (
@@ -48,14 +64,29 @@ class VolumeProfileScoreEngine(AnalysisEngine):
             + confluence
         )
 
+        reasons = []
+
+        if profile.poc is not None:
+            reasons.append("Point of Control identified.")
+
+        if (
+            profile.value_area_high is not None
+            and profile.value_area_low is not None
+        ):
+            reasons.append("Value Area identified.")
+
+        if profile.bullish:
+            reasons.append("Bullish Volume Profile.")
+
+        if profile.bearish:
+            reasons.append("Bearish Volume Profile.")
+
         return VolumeProfileScore(
-            score=total,
+            score=min(total, 100.0),
             poc_quality=poc_quality,
             value_area=value_area,
             hvn_lvn=hvn_lvn,
             reaction_strength=reaction_strength,
             confluence=confluence,
-            reasons=[
-                "Volume Profile scored successfully.",
-            ],
+            reasons=reasons,
         )

@@ -34,10 +34,28 @@ class AVWAPScoreEngine(AnalysisEngine):
                 ],
             )
 
-        anchor_quality = 20.0
-        distance = 20.0
-        trend_alignment = 20.0
+        # Distance Score
+        if avwap.distance_percent <= 0.25:
+            distance = 20.0
+        elif avwap.distance_percent <= 0.50:
+            distance = 18.0
+        elif avwap.distance_percent <= 1.00:
+            distance = 15.0
+        elif avwap.distance_percent <= 2.00:
+            distance = 10.0
+        else:
+            distance = 5.0
+
+        # Trend Alignment
+        trend_alignment = 20.0 if (avwap.bullish or avwap.bearish) else 0.0
+
+        # Existing AVWAP confidence
+        anchor_quality = min(avwap.score, 20.0)
+
+        # Placeholder until we have reaction data
         reaction_strength = 20.0
+
+        # Placeholder until we have Volume Profile/FVG integration
         confluence = 20.0
 
         total = (
@@ -49,13 +67,16 @@ class AVWAPScoreEngine(AnalysisEngine):
         )
 
         return AVWAPScore(
-            score=total,
+            score=min(total, 100.0),
             anchor_quality=anchor_quality,
             distance=distance,
             trend_alignment=trend_alignment,
             reaction_strength=reaction_strength,
             confluence=confluence,
             reasons=[
-                "AVWAP scored successfully.",
+                f"Distance from AVWAP: {avwap.distance_percent:.2f}%",
+                "Trend aligned with AVWAP."
+                if trend_alignment > 0
+                else "Trend not aligned.",
             ],
         )

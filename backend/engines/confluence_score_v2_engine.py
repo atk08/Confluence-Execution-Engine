@@ -46,6 +46,28 @@ class ConfluenceScoreV2Engine(AnalysisEngine):
             + liquidity_score
         )
 
+        reasons = [
+            "Weighted confluence score calculated.",
+        ]
+
+        if avwap.score >= 80:
+            reasons.append("Strong Anchored VWAP confluence.")
+
+        if volume.score >= 80:
+            reasons.append("Strong Volume Profile confluence.")
+
+        if fvg.score >= 80:
+            reasons.append("Strong Fair Value Gap confluence.")
+
+        if market.score >= 80:
+            reasons.append("Strong market structure.")
+
+        if liquidity.score >= 80:
+            reasons.append("Liquidity supports the setup.")
+
+        if order_block.score >= 80:
+            reasons.append("Order block supports the setup.")
+
         return ConfluenceScoreV2(
             score=round(total, 2),
             market_structure=market_score,
@@ -54,7 +76,5 @@ class ConfluenceScoreV2Engine(AnalysisEngine):
             order_block=order_block_score,
             fair_value_gap=fvg_score,
             liquidity=liquidity_score,
-            reasons=[
-                "Weighted confluence score calculated.",
-            ],
+            reasons=reasons,
         )
