@@ -4,12 +4,24 @@ FastAPI Application.
 Main API entry point for Confluence Execution Engine.
 """
 
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.providers.twelve_data import TwelveDataProvider
-from backend.pipelines.analysis_pipeline import AnalysisPipeline
-from backend.engines.final_analysis_engine import FinalAnalysisEngine
+
+from backend.providers.twelve_data import (
+    TwelveDataProvider,
+)
+
+from backend.services.scanner_service import (
+    ScannerService,
+)
+
 
 
 app = FastAPI(
@@ -17,6 +29,7 @@ app = FastAPI(
     version="1.0.0",
     description="Institutional market analysis engine",
 )
+
 
 
 #
@@ -47,6 +60,18 @@ def root():
     return {
         "status": "online",
         "service": "Confluence Execution Engine",
+        "version": "1.0.0",
+    }
+
+
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "healthy",
+        "engine": "Confluence Execution Engine",
+        "version": "1.0.0",
     }
 
 
@@ -60,23 +85,27 @@ def scan(
 
     try:
 
+
         #
-        # Normalize symbols
+        # Normalize symbol
         #
 
         market_symbol = symbol.upper()
 
 
         if market_symbol == "BTC":
+
             market_symbol = "BTC/USD"
 
+
         elif market_symbol == "ETH":
+
             market_symbol = "ETH/USD"
 
 
 
         #
-        # Get candles
+        # Get market data
         #
 
         candles = provider.get_candles(
@@ -96,21 +125,11 @@ def scan(
 
 
         #
-        # Run analysis pipeline
+        # Run Scanner Service
         #
 
-        context = AnalysisPipeline.run(
-            candles
-        )
-
-
-
-        #
-        # Final analysis
-        #
-
-        result = FinalAnalysisEngine.analyze(
-            context=context,
+        result = ScannerService.scan(
+            candles=candles,
             symbol=market_symbol,
             timeframe=interval,
         )
@@ -118,7 +137,7 @@ def scan(
 
 
         #
-        # Return response
+        # API Response
         #
 
         return {
@@ -150,6 +169,7 @@ def scan(
     except HTTPException:
 
         raise
+
 
 
     except Exception as e:
