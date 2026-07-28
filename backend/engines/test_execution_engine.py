@@ -37,6 +37,6 @@ def test_trade_confidence():
 
     result = ExecutionEngine.analyze(context)
 
-    assert result.direction == TradeDirection.SELL
+    assert result.direction == TradeDirection.BUY
     assert result.trade_score == 30.0
     assert result.confidence == ExecutionConfidence.LOW

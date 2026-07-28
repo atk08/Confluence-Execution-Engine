@@ -1,13 +1,14 @@
 """
 Final Analysis Engine.
 
-Combines all analysis engines into final trading output.
+Combines every analysis component into the final result.
 """
+
 
 from backend.core.analysis_engine import AnalysisEngine
 
-from backend.models.analysis_context import AnalysisContext
-from backend.models.analysis_result import AnalysisResult
+
+from backend.models.trade_signal import TradeSignal
 
 
 from backend.engines.market_structure_score_engine import (
@@ -22,14 +23,6 @@ from backend.engines.avwap_score_engine import (
     AVWAPScoreEngine,
 )
 
-from backend.engines.fair_value_gap_score_engine import (
-    FairValueGapScoreEngine,
-)
-
-from backend.engines.liquidity_score_engine import (
-    LiquidityScoreEngine,
-)
-
 from backend.engines.order_block_engine import (
     OrderBlockEngine,
 )
@@ -38,12 +31,36 @@ from backend.engines.order_block_score_engine import (
     OrderBlockScoreEngine,
 )
 
+from backend.engines.fair_value_gap_score_engine import (
+    FairValueGapScoreEngine,
+)
+
+from backend.engines.liquidity_score_engine import (
+    LiquidityScoreEngine,
+)
+
 from backend.engines.confluence_score_v2_engine import (
     ConfluenceScoreV2Engine,
 )
 
+from backend.engines.directional_bias_engine import (
+    DirectionalBiasEngine,
+)
+
+from backend.engines.confidence_engine import (
+    ConfidenceEngine,
+)
+
+from backend.engines.setup_quality_engine import (
+    SetupQualityEngine,
+)
+
 from backend.engines.signal_engine import (
     SignalEngine,
+)
+
+from backend.engines.trade_plan_engine import (
+    TradePlanEngine,
 )
 
 from backend.engines.analysis_result_engine import (
@@ -51,111 +68,171 @@ from backend.engines.analysis_result_engine import (
 )
 
 
+
 class FinalAnalysisEngine(AnalysisEngine):
-    """
-    Produces final Confluence result.
-    """
 
     name = "Final Analysis Engine"
+
 
 
     @classmethod
     def analyze(
         cls,
-        context: AnalysisContext,
-        symbol: str = "UNKNOWN",
-        timeframe: str = "UNKNOWN",
-    ) -> AnalysisResult:
+        context,
+        symbol: str,
+        timeframe: str,
+    ):
 
 
         #
-        # Market Structure
+        # Component Scores
         #
 
-        market = MarketStructureScoreEngine.analyze(
-            context
+        market_structure = (
+            MarketStructureScoreEngine.analyze(
+                context
+            )
         )
 
 
-        #
-        # Volume Profile
-        #
-
-        volume = VolumeProfileScoreEngine.analyze(
-            context.volume_profile
+        volume_profile = (
+            VolumeProfileScoreEngine.analyze(
+                context.volume_profile
+            )
         )
 
 
-        #
-        # AVWAP
-        #
-
-        avwap = AVWAPScoreEngine.analyze(
-            context.avwap
+        avwap = (
+            AVWAPScoreEngine.analyze(
+                context.avwap
+            )
         )
 
 
-        #
-        # Fair Value Gap
-        #
-
-        fvg = FairValueGapScoreEngine.analyze(
-            context.fvg
+        fair_value_gap = (
+            FairValueGapScoreEngine.analyze(
+                context.fvg
+            )
         )
 
 
-        #
-        # Liquidity
-        #
-        # IMPORTANT:
-        # Now uses full AnalysisContext
-        # so it can see:
-        # - trend
-        # - institutional move
-        # - BOS
-        # - CHoCH
-        #
-
-        liquidity = LiquidityScoreEngine.analyze(
-            context
+        liquidity = (
+            LiquidityScoreEngine.analyze(
+                context.liquidity
+            )
         )
+
 
 
         #
         # Order Block
         #
 
-        order_block_result = OrderBlockEngine.analyze(
-            context
+        order_block_result = (
+            OrderBlockEngine.analyze(
+                context
+            )
         )
 
 
-        order_block = OrderBlockScoreEngine.analyze(
-            order_block_result
+        order_block = (
+            OrderBlockScoreEngine.analyze(
+                order_block_result
+            )
         )
 
 
+
         #
-        # Confluence Calculation
+        # Confluence
         #
 
-        confluence = ConfluenceScoreV2Engine.analyze(
-            market,
-            volume,
-            avwap,
-            order_block,
-            fvg,
-            liquidity,
+        confluence = (
+            ConfluenceScoreV2Engine.analyze(
+                market_structure,
+                volume_profile,
+                avwap,
+                order_block,
+                fair_value_gap,
+                liquidity,
+            )
         )
 
 
+
         #
-        # Trading Signal
+        # Directional Bias
         #
 
-        signal = SignalEngine.analyze(
-            confluence
+        directional_bias = (
+            DirectionalBiasEngine.analyze(
+                context
+            )
         )
+
+
+
+        #
+        # Confidence
+        #
+
+        confidence = (
+            ConfidenceEngine.analyze(
+                confluence,
+                directional_bias,
+                context,
+            )
+        )
+
+
+
+        #
+        # Setup Quality
+        #
+
+        setup_quality = (
+            SetupQualityEngine.analyze(
+                confluence,
+                confidence,
+            )
+        )
+
+
+
+        #
+        # Signal
+        #
+
+        signal_result = (
+            SignalEngine.analyze(
+                confluence,
+                context,
+            )
+        )
+
+
+        signal = TradeSignal(
+            signal=signal_result.signal,
+            confidence=confidence.confidence,
+            confluence_score=confluence.score,
+            reasons=[
+                *signal_result.reasons,
+            ],
+        )
+
+
+
+        #
+        # Trade Plan
+        #
+
+        trade_plan = (
+            TradePlanEngine.analyze(
+                context,
+                directional_bias.bias,
+            )
+        )
+
 
 
         #
@@ -165,37 +242,66 @@ class FinalAnalysisEngine(AnalysisEngine):
         current_price = (
             context.candles[-1].close
             if context.candles
-            else 0.0
+            else 0
+        )
+
+
+
+        #
+        # Final Reasons
+        #
+
+        reasons = []
+
+
+        reasons.extend(
+            confluence.reasons
+        )
+
+
+        reasons.extend(
+            directional_bias.reasons
+        )
+
+
+        reasons.extend(
+            confidence.reasons
+        )
+
+
+        reasons.append(
+            f"Setup grade: {setup_quality.grade}."
+        )
+
+
+        reasons.append(
+            f"Confirmations: {setup_quality.confirmations_count}."
+        )
+
+
+        reasons.append(
+            f"Missing confirmations: {setup_quality.missing_count}."
         )
 
 
         #
-        # Market Bias
+        # Trade Plan Reasons
         #
 
-        if confluence.score >= 60:
-
-            market_bias = "BULLISH"
-
-        elif confluence.score <= 40:
-
-            market_bias = "BEARISH"
-
-        else:
-
-            market_bias = "NEUTRAL"
+        reasons.extend(
+            trade_plan.reasons
+        )
 
 
-        #
-        # Reasons
-        #
+        reasons.extend(
+            order_block.reasons
+        )
 
-        reasons = [
-            *confluence.reasons,
-            *signal.reasons,
-            *order_block.reasons,
-            *liquidity.reasons,
-        ]
+
+        reasons.extend(
+            liquidity.reasons
+        )
+
 
 
         #
@@ -203,12 +309,22 @@ class FinalAnalysisEngine(AnalysisEngine):
         #
 
         return AnalysisResultEngine.analyze(
+
             symbol=symbol,
+
             timeframe=timeframe,
+
             current_price=current_price,
-            market_bias=market_bias,
+
+            market_bias=directional_bias.bias,
+
             confluence=confluence,
+
             signal=signal,
+
             institutional_move=context.institutional_move,
+
+            trade_plan=trade_plan,
+
             reasons=reasons,
         )

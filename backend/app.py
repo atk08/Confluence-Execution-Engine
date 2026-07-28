@@ -1,127 +1,160 @@
-from dataclasses import asdict
+"""
+FastAPI Application.
 
-from fastapi import FastAPI, Query, HTTPException
-from pydantic import BaseModel
+Main API entry point for Confluence Execution Engine.
+"""
 
-from backend.models.candles import Candle
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-from backend.pipelines.analysis_pipeline import (
-    AnalysisPipeline,
-)
-
-from backend.engines.final_analysis_engine import (
-    FinalAnalysisEngine,
-)
-
-from backend.providers.twelve_data import (
-    TwelveDataProvider,
-)
+from backend.providers.twelve_data import TwelveDataProvider
+from backend.pipelines.analysis_pipeline import AnalysisPipeline
+from backend.engines.final_analysis_engine import FinalAnalysisEngine
 
 
 app = FastAPI(
     title="Confluence Execution Engine",
     version="1.0.0",
+    description="Institutional market analysis engine",
 )
 
 
-class CandleRequest(BaseModel):
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
+#
+# CORS
+#
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
+#
+# Market Data Provider
+#
+
+provider = TwelveDataProvider()
+
 
 
 @app.get("/")
 def root():
+
     return {
-        "status": "running",
-        "engine": "Confluence Execution Engine",
-        "version": "1.0.0",
+        "status": "online",
+        "service": "Confluence Execution Engine",
     }
 
 
-@app.get("/health")
-def health():
-    return {
-        "healthy": True,
-        "engine": "ready",
-    }
 
-
-@app.post("/analyze")
-def analyze(candles: list[CandleRequest]):
-
-    candle_objects = [
-        Candle(
-            open=c.open,
-            high=c.high,
-            low=c.low,
-            close=c.close,
-            volume=c.volume,
-        )
-        for c in candles
-    ]
-
-    context = AnalysisPipeline.run(
-        candle_objects
-    )
-
-    result = FinalAnalysisEngine.analyze(
-        context
-    )
-
-    return asdict(result)
-
-
-@app.get("/scan/{symbol:path}")
+@app.get("/scan/{symbol}")
 def scan(
     symbol: str,
-    interval: str = Query("5min"),
-    outputsize: int = Query(100),
+    interval: str = "5min",
+    outputsize: int = 100,
 ):
 
-    # Normalize symbol
-    symbol = symbol.upper()
-
-    # Force crypto format
-    if symbol in [
-        "BTC",
-        "ETH",
-        "SOL",
-        "XRP",
-    ]:
-        symbol = f"{symbol}/USD"
-
-    provider = TwelveDataProvider()
-
     try:
+
+        #
+        # Normalize symbols
+        #
+
+        market_symbol = symbol.upper()
+
+
+        if market_symbol == "BTC":
+            market_symbol = "BTC/USD"
+
+        elif market_symbol == "ETH":
+            market_symbol = "ETH/USD"
+
+
+
+        #
+        # Get candles
+        #
+
         candles = provider.get_candles(
-            symbol=symbol,
+            symbol=market_symbol,
             interval=interval,
             outputsize=outputsize,
         )
 
+
+        if not candles:
+
+            raise HTTPException(
+                status_code=404,
+                detail="No candle data returned.",
+            )
+
+
+
+        #
+        # Run analysis pipeline
+        #
+
+        context = AnalysisPipeline.run(
+            candles
+        )
+
+
+
+        #
+        # Final analysis
+        #
+
+        result = FinalAnalysisEngine.analyze(
+            context=context,
+            symbol=market_symbol,
+            timeframe=interval,
+        )
+
+
+
+        #
+        # Return response
+        #
+
+        return {
+
+            "symbol": result.symbol,
+
+            "timeframe": result.timeframe,
+
+            "current_price": result.current_price,
+
+            "market_bias": result.market_bias,
+
+            "confluence": result.confluence,
+
+            "signal": result.signal,
+
+            "institutional_move": result.institutional_move,
+
+            "trade_plan": result.trade_plan,
+
+            "summary": result.summary,
+
+            "reasons": result.reasons,
+
+        }
+
+
+
+    except HTTPException:
+
+        raise
+
+
     except Exception as e:
+
         raise HTTPException(
-            status_code=400,
-            detail=f"Market data error: {str(e)}",
+            status_code=500,
+            detail=str(e),
         )
-
-    if not candles:
-        raise HTTPException(
-            status_code=404,
-            detail="No candles returned for symbol.",
-        )
-
-    context = AnalysisPipeline.run(
-        candles
-    )
-
-    result = FinalAnalysisEngine.analyze(
-        context,
-        symbol=symbol,
-        timeframe=interval,
-    )
-
-    return asdict(result)

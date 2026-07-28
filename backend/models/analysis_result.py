@@ -6,9 +6,8 @@ from dataclasses import dataclass
 
 from backend.models.confluence_score_v2 import ConfluenceScoreV2
 from backend.models.trade_signal import TradeSignal
-from backend.models.institutional_move_result import (
-    InstitutionalMoveResult,
-)
+from backend.models.institutional_move_result import InstitutionalMoveResult
+from backend.models.trade_plan_result import TradePlanResult
 
 
 @dataclass(frozen=True)
@@ -30,6 +29,8 @@ class AnalysisResult:
     signal: TradeSignal
 
     institutional_move: InstitutionalMoveResult | None
+
+    trade_plan: TradePlanResult | None
 
     summary: str
 
