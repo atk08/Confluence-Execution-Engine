@@ -4,7 +4,6 @@ FastAPI Application.
 Main API entry point for Confluence Execution Engine.
 """
 
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -32,10 +31,6 @@ app = FastAPI(
 
 
 
-#
-# CORS
-#
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -45,10 +40,6 @@ app.add_middleware(
 )
 
 
-
-#
-# Market Data Provider
-#
 
 provider = TwelveDataProvider()
 
@@ -85,28 +76,16 @@ def scan(
 
     try:
 
-
-        #
-        # Normalize symbol
-        #
-
         market_symbol = symbol.upper()
 
 
         if market_symbol == "BTC":
-
             market_symbol = "BTC/USD"
 
-
         elif market_symbol == "ETH":
-
             market_symbol = "ETH/USD"
 
 
-
-        #
-        # Get market data
-        #
 
         candles = provider.get_candles(
             symbol=market_symbol,
@@ -123,11 +102,6 @@ def scan(
             )
 
 
-
-        #
-        # Run Scanner Service
-        #
-
         result = ScannerService.scan(
             candles=candles,
             symbol=market_symbol,
@@ -135,10 +109,9 @@ def scan(
         )
 
 
+        trade_plan = result.trade_plan
 
-        #
-        # API Response
-        #
+
 
         return {
 
@@ -146,19 +119,69 @@ def scan(
 
             "timeframe": result.timeframe,
 
-            "current_price": result.current_price,
+            "price": result.current_price,
 
-            "market_bias": result.market_bias,
+            "bias": result.market_bias,
 
-            "confluence": result.confluence,
 
-            "signal": result.signal,
+            "analysis": {
 
-            "institutional_move": result.institutional_move,
+                "score": result.confluence.score,
 
-            "trade_plan": result.trade_plan,
+                "signal": result.signal.signal,
 
-            "summary": result.summary,
+                "confidence": result.signal.confidence,
+
+                "summary": result.summary,
+
+            },
+
+
+            "execution": {
+
+                "direction": (
+                    trade_plan.direction
+                    if trade_plan
+                    else "NONE"
+                ),
+
+                "entry": (
+                    trade_plan.entry
+                    if trade_plan
+                    else None
+                ),
+
+                "stop_loss": (
+                    trade_plan.stop_loss
+                    if trade_plan
+                    else None
+                ),
+
+                "take_profit": (
+                    trade_plan.take_profit_1
+                    if trade_plan
+                    else None
+                ),
+
+                "risk_reward": (
+                    trade_plan.risk_reward
+                    if trade_plan
+                    else None
+                ),
+
+            },
+
+
+            "details": {
+
+                "confluence": result.confluence,
+
+                "institutional_move": (
+                    result.institutional_move
+                ),
+
+            },
+
 
             "reasons": result.reasons,
 
@@ -169,7 +192,6 @@ def scan(
     except HTTPException:
 
         raise
-
 
 
     except Exception as e:
